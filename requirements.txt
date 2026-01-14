@@ -1,0 +1,11 @@
+numpy
+pandas
+opencv-python
+matplotlib
+scikit-learn
+torch
+torchvision
+fastapi
+uvicorn
+pydantic
+python-dotenv
