@@ -16,5 +16,25 @@ Early detection of diseases from chest X-ray images.
 - Docker
 - GitHub Actions (planned)
 
+## System Architecture
+
+```mermaid
+flowchart TB
+    U["End User"] -->|HTTPS| F["Frontend Web App\nReact"]
+    F -->|REST API| B["Backend API\nFastAPI"]
+    
+    B --> M["ML Inference Layer"]
+    
+    M --> P["Preprocessing"]
+    P --> I["Model Inference"]
+    I --> O["Postprocessing and Explainability"]
+    
+    I --> MS["Model Storage\nVersioned Models"]
+    B --> DB["Metadata DB\nPredictions and Logs"]
+    
+    O --> B
+    B --> F
+```
+
 ## Project Status
 🚧 In progress

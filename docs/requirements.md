@@ -29,8 +29,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 * Regulatory approval (FDA, CE)
 * Multi-modal medical data (e.g., CT scans, lab reports)
 
----
-
 ## 2. Stakeholders
 
 | Stakeholder        | Description                  | Needs                             |
@@ -39,8 +37,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 | Backend Engineer   | Builds API & deployment      | Stable inference, scalability     |
 | End User           | Uses web app                 | Simple UI, fast results           |
 | Reviewer/Recruiter | Evaluates project            | Clean architecture, documentation |
-
----
 
 ## 3. Functional Requirements
 
@@ -73,8 +69,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 * System shall display prediction results clearly
 * System shall show inference status and errors
 
----
-
 ## 4. Non-Functional Requirements
 
 ### 4.1 Performance
@@ -102,8 +96,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 * Code shall follow modular architecture
 * System shall include unit and integration tests
 
----
-
 ## 5. Machine Learning Requirements
 
 ### 5.1 Data Requirements
@@ -125,8 +117,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 * Confusion Matrix
 * ROC-AUC (if applicable)
 
----
-
 ## 6. System Constraints
 
 * Development environment: Python, PyTorch/TensorFlow
@@ -134,8 +124,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 * Frontend: React
 * Deployment: Docker (optional cloud deployment)
 * Hardware: CPU-first, optional GPU support
-
----
 
 ## 7. Assumptions and Risks
 
@@ -150,16 +138,12 @@ This document defines the functional, non-functional, data, ML, and system requi
 * Limited dataset size may reduce performance
 * Overfitting due to class imbalance
 
----
-
 ## 8. Acceptance Criteria
 
 * Model achieves ≥ X% accuracy on test set
 * API responds correctly to valid/invalid inputs
 * UI successfully uploads and displays predictions
 * System is reproducible from repository setup instructions
-
----
 
 ## 9. Traceability (High-Level)
 
@@ -168,8 +152,6 @@ This document defines the functional, non-functional, data, ML, and system requi
 | Image Upload   | UI          | React          | UI Tests          |
 | Prediction API | Backend     | FastAPI        | API Tests         |
 | Model Accuracy | ML Pipeline | CNN Model      | Evaluation Script |
-
----
 
 ## 10. Future Enhancements
 
