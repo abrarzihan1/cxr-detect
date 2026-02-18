@@ -37,5 +37,11 @@ dev = [
     "mypy>=1.10",
     "ipykernel>=6.29",
     "pre-commit",
+    "pytest-cov",
 ]
 
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+pythonpath = ["src"]
