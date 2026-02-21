@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cxr_detect.data.label_encoder import encode_labels
+from cxr_detect.data.encode_labels import encode_labels
 
 
 # Mock disease list
