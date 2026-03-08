@@ -20,7 +20,8 @@ dependencies = [
     "scikit-learn>=1.7.1",
     "matplotlib>=3.10.3",
     "tqdm>=4.67.1",
-    "pyyaml>=6.0"
+    "pyyaml>=6.0",
+    "tensorboard>=2.14"
 ]
 
 [tool.setuptools]
@@ -44,4 +45,3 @@ dev = [
 minversion = "8.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
-pythonpath = ["src"]

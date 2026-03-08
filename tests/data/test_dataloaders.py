@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch
 from torch.utils.data import DataLoader, Dataset
 import torch
-from cxr_detect.data.dataloader import prepare_data_if_needed, create_dataloaders
+import cxr_detect.data.dataloader as dataloader
 
 
 # --- FIXTURES ---
@@ -52,7 +52,7 @@ def test_prepare_data_already_exists(
     (processed_dir / "val.csv").touch()
     (processed_dir / "test.csv").touch()
 
-    result_path = prepare_data_if_needed(raw_csv, processed_dir)
+    result_path = dataloader.prepare_data_if_needed(raw_csv, processed_dir)
 
     assert result_path == processed_dir
     # Ensure none of the heavy processing functions were called
@@ -79,7 +79,7 @@ def test_prepare_data_runs_pipeline(
     mock_load_classes.return_value = ["DiseaseA", "DiseaseB"]
     mock_encode.return_value = "dummy_encoded_df"
 
-    result_path = prepare_data_if_needed(raw_csv, processed_dir, seed=99)
+    result_path = dataloader.prepare_data_if_needed(raw_csv, processed_dir, seed=99)
 
     assert result_path == processed_dir
 
@@ -96,7 +96,7 @@ def test_prepare_data_missing_raw(mock_dirs):
     # We purposefully DO NOT touch/create the raw_csv
 
     with pytest.raises(FileNotFoundError):
-        prepare_data_if_needed(raw_csv, processed_dir)
+        dataloader.prepare_data_if_needed(raw_csv, processed_dir)
 
 
 # --- TESTS FOR create_dataloaders ---
@@ -114,7 +114,7 @@ def test_create_dataloaders(mock_prepare, mock_dirs):
     batch_size = 4
     num_workers = 2
 
-    train_loader, val_loader, test_loader = create_dataloaders(
+    train_loader, val_loader, test_loader = dataloader.create_dataloaders(
         raw_csv_path=raw_csv,
         processed_dir=processed_dir,
         img_dir=img_dir,

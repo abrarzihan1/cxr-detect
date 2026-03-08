@@ -3,8 +3,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from unittest.mock import patch
-
-from cxr_detect.data.dataset import CXRDataset
+import cxr_detect.data.dataset as dataset_module
 
 
 # --- Fixtures: Setup Fake Data ---
@@ -67,7 +66,7 @@ def test_dataset_length(mock_load, mock_csv_data, mock_img_dir, mock_disease_cla
     # Configure the mock to return our test classes
     mock_load.return_value = mock_disease_classes
 
-    dataset = CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
+    dataset = dataset_module.CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
 
     # We created 3 rows in the CSV
     assert len(dataset) == 3
@@ -80,7 +79,7 @@ def test_getitem_structure(
     """Test the output types and shapes of __getitem__."""
     mock_load.return_value = mock_disease_classes
 
-    dataset = CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
+    dataset = dataset_module.CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
 
     image, label = dataset[0]
 
@@ -101,7 +100,7 @@ def test_label_correctness(
     """Test if the specific labels match the CSV data."""
     mock_load.return_value = mock_disease_classes
 
-    dataset = CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
+    dataset = dataset_module.CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
 
     # Test Item 0: Atelectasis=1 (Index 0)
     _, label_0 = dataset[0]
@@ -126,7 +125,7 @@ def test_transforms_applied(
         [transforms.Resize((100, 100)), transforms.ToTensor()]
     )
 
-    dataset = CXRDataset(
+    dataset = dataset_module.CXRDataset(
         csv_path=mock_csv_data, img_dir=mock_img_dir, transform=my_transform
     )
 
@@ -148,7 +147,7 @@ def test_missing_image_error(
     # Delete one image from the directory to simulate a missing file
     (mock_img_dir / "img_01.png").unlink()
 
-    dataset = CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
+    dataset = dataset_module.CXRDataset(csv_path=mock_csv_data, img_dir=mock_img_dir)
 
     # Accessing index 0 (which points to img_01.png) should crash
     with pytest.raises(FileNotFoundError):

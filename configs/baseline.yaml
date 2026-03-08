@@ -1,0 +1,25 @@
+experiment_name: "resnet50_baseline"
+seed: 42
+
+data:
+  raw_csv_path: "data/raw/Data_Entry_2017.csv"
+  img_dir: "data/raw/images"
+  processed_dir: "data/processed"
+  img_size: 224
+  batch_size: 32
+  num_workers: 4
+
+model:
+  name: "resnet50"
+  pretrained: true
+
+training:
+  epochs: 15
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  max_grad_norm: 1.0
+  patience: 4
+  save_dir: "models/checkpoints"
+  log_dir: "logs/tensorboard"
+  use_amp: true
+  resume: null
