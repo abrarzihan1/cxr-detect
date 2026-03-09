@@ -60,8 +60,8 @@ def encode_labels(df: pd.DataFrame, diseases: Sequence[str]) -> pd.DataFrame:
         errors="ignore",
     )
 
-    df_out["patient_age"] = (
-        df_out["patient_age"].str.replace("Y", "", regex=False).astype(int)
+    df_out["patient_age"] = pd.to_numeric(
+        df_out["patient_age"].str.extract(r"(\d+)", expand=False), errors="coerce"
     )
 
     # One-hot encode disease labels
