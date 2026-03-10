@@ -7,6 +7,8 @@ import torch.nn as nn
 import yaml
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torchmetrics import AUROC
+import numpy as np
 
 from cxr_detect.data.dataloader import create_dataloaders
 from cxr_detect.models.model_factory import create_model
@@ -40,6 +42,49 @@ def load_config(config_path: str) -> dict:
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
     return config
+
+
+def compute_disease_auroc(model, test_loader, device, disease_classes):
+    """Compute AUROC for each disease class on test set."""
+    model.eval()
+    all_preds = []
+    all_targets = []
+
+    with torch.no_grad():
+        for batch_images, batch_labels in test_loader:
+            batch_images = batch_images.to(device)
+            batch_labels = batch_labels.to(device)
+
+            outputs = model(batch_images)
+            probs = torch.sigmoid(outputs)
+            all_preds.append(probs.cpu())
+            all_targets.append(batch_labels.cpu())
+
+    all_preds = torch.cat(all_preds)
+    all_targets = torch.cat(all_targets)
+
+    # Compute per-disease AUROC
+    aurocs = {}
+    for i, disease in enumerate(disease_classes):
+        target = all_targets[:, i]
+        pred = all_preds[:, i]
+
+        # Skip if no positive samples for this disease
+        if target.sum() == 0 or (target == 0).sum() == 0:
+            aurocs[disease] = 0.0
+            LOGGER.warning(f"No positive/negative samples for {disease}, AUROC=0.0")
+            continue
+
+        metric = AUROC(task="binary")
+        metric.update(pred, target.int())
+        auroc_score = metric.compute().item()
+        aurocs[disease] = auroc_score
+
+    # Compute macro AUROC (average across diseases)
+    valid_aurocs = [score for score in aurocs.values() if score > 0]
+    macro_auroc = np.mean(valid_aurocs) if valid_aurocs else 0.0
+
+    return aurocs, macro_auroc
 
 
 def main():
@@ -130,6 +175,34 @@ def main():
     # 7. Start the Training Loop
     trainer.fit()
     LOGGER.info("Experiment %s finished.", experiment_name)
+
+    # 8. Compute and log disease-wise AUROC on test set (using best model)
+    LOGGER.info("Computing disease-wise AUROC on test set...")
+    best_model_path = exp_save_dir / "best_model.pth"
+    if best_model_path.exists():
+        checkpoint = torch.load(best_model_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        LOGGER.info("Loaded best model for evaluation")
+
+    disease_aurocs, macro_auroc = compute_disease_auroc(
+        model, test_loader, device, disease_classes
+    )
+
+    # Log results
+    LOGGER.info("=== Disease-wise AUROC Results ===")
+    for disease, auroc in disease_aurocs.items():
+        LOGGER.info("%-25s: %.4f", disease, auroc)
+    LOGGER.info("Macro AUROC (avg): %.4f", macro_auroc)
+
+    # Save AUROC results to file
+    results_path = exp_save_dir / "disease_aurocs.txt"
+    with open(results_path, "w") as f:
+        f.write("Disease-wise AUROC Results\n")
+        f.write("=" * 40 + "\n")
+        for disease, auroc in disease_aurocs.items():
+            f.write(f"{disease:25s}: {auroc:.4f}\n")
+        f.write(f"Macro AUROC (avg): {macro_auroc:.4f}\n")
+    LOGGER.info("AUROC results saved to %s", results_path)
 
 
 if __name__ == "__main__":

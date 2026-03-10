@@ -23,7 +23,7 @@ def train_one_epoch(
     running_loss = 0.0
     total_samples = 0
 
-    pbar = tqdm(dataloader, desc=f"Epoch {epoch} [Train]", leave=False)
+    pbar = tqdm(dataloader, desc=f"Epoch {epoch} [Train]", leave=True)
 
     for images, targets in pbar:
         images = images.to(device, non_blocking=True)
