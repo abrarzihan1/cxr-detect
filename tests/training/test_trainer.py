@@ -248,8 +248,8 @@ def test_save_checkpoint_saves_last_and_best(mock_classes, mock_torch_save, tmp_
 
     assert mock_torch_save.call_count == 2
     saved_paths = [args[1] for args, _ in mock_torch_save.call_args_list]
-    assert trainer.save_dir / "checkpoint_last.pth" in saved_paths
-    assert trainer.save_dir / "checkpoint_best.pth" in saved_paths
+    assert trainer.save_dir / "best_model.pt" in saved_paths
+    assert trainer.save_dir / "latest_model.pt" in saved_paths
 
 
 @patch("cxr_detect.training.trainer.torch.load")

@@ -72,13 +72,15 @@ class Trainer:
         self.scaler = GradScaler("cuda", enabled=scaler_enabled)
 
     def fit(self):
-        """Executes the multi-epoch training loop."""
+        """Executes the multi-epoch training loop and returns epoch history."""
         LOGGER.info(
             "Starting multi-epoch training on %s | AMP Enabled: %s | Patience: %d",
             self.device,
             self.scaler.is_enabled(),
             self.patience,
         )
+
+        history = []
 
         for epoch in range(self.start_epoch, self.num_epochs + 1):
             LOGGER.info("\n--- Epoch %d/%d ---", epoch, self.num_epochs)
@@ -122,13 +124,24 @@ class Trainer:
                 auc_display,
             )
 
+            current_lr = self.optimizer.param_groups[0]["lr"]
+
+            # Save to history list for train_log.csv
+            history.append(
+                {
+                    "epoch": epoch,
+                    "train_loss": round(train_loss, 4),
+                    "val_loss": round(val_loss, 4),
+                    "val_auc": round(macro_auc, 4) if not np.isnan(macro_auc) else 0.0,
+                    "learning_rate": current_lr,
+                }
+            )
+
             # 4. Log to TensorBoard
             if self.writer is not None:
                 self.writer.add_scalar("Loss/Train", train_loss, epoch)
                 self.writer.add_scalar("Loss/Validation", val_loss, epoch)
-                self.writer.add_scalar(
-                    "Learning_Rate", self.optimizer.param_groups[0]["lr"], epoch
-                )
+                self.writer.add_scalar("Learning_Rate", current_lr, epoch)
 
                 if not np.isnan(macro_auc):
                     self.writer.add_scalar("Metrics/Macro_AUROC", macro_auc, epoch)
@@ -163,6 +176,8 @@ class Trainer:
         if self.writer is not None:
             self.writer.close()
 
+        return history
+
     def _save_checkpoint(self, epoch: int, val_loss: float, is_best: bool):
         checkpoint = {
             "epoch": epoch,
@@ -176,10 +191,16 @@ class Trainer:
             "early_stop_counter": self.early_stop_counter,
         }
 
-        torch.save(checkpoint, self.save_dir / "checkpoint_last.pth")
+        # Instead of checkpoint_last.pth and checkpoint_best.pth
+        # saving as requested specifically: best_model.pt
         if is_best:
-            torch.save(checkpoint, self.save_dir / "checkpoint_best.pth")
-            LOGGER.info("-> Saved new best model (Val Loss: %.4f)", val_loss)
+            torch.save(checkpoint, self.save_dir / "best_model.pt")
+            LOGGER.info(
+                "-> Saved new best model as best_model.pt (Val Loss: %.4f)", val_loss
+            )
+
+        # Optional: Save a generic latest checkpoint if you ever need to resume easily
+        torch.save(checkpoint, self.save_dir / "latest_model.pt")
 
     def load_checkpoint(self, path: str | Path):
         path = Path(path)
