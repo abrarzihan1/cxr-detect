@@ -9,6 +9,8 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torchmetrics import AUROC
 import numpy as np
+import json
+import csv
 
 from cxr_detect.data.dataloader import create_dataloaders
 from cxr_detect.models.model_factory import create_model
@@ -92,7 +94,6 @@ def main():
     config = load_config(args.config)
 
     # 1. Setup Environment
-    # We use .get() for optional parameters to prevent crashes if they are missing
     seed = config.get("seed", 42)
     set_seed(seed)
 
@@ -101,7 +102,6 @@ def main():
     LOGGER.info("Starting experiment: %s | Device: %s", experiment_name, device)
 
     # 2. Setup DataLoaders
-    # Notice we extract from the "data" section of the YAML
     data_cfg = config["data"]
     train_loader, val_loader, test_loader = create_dataloaders(
         raw_csv_path=data_cfg["raw_csv_path"],
@@ -144,11 +144,17 @@ def main():
     epochs = train_cfg.get("epochs", 20)
     scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
 
-    # 6. Initialize Multi-Epoch Trainer
-    exp_save_dir = (
-        Path(train_cfg.get("save_dir", "models/checkpoints")) / experiment_name
-    )
+    # 6. Initialize Multi-Epoch Trainer & Experiment Folders
+    exp_save_dir = Path(train_cfg.get("save_dir", "experiments")) / experiment_name
+    exp_save_dir.mkdir(parents=True, exist_ok=True)
+
     log_dir = train_cfg.get("log_dir", "logs/tensorboard")
+
+    # Save the exact config used for this run
+    config_out_path = exp_save_dir / "config.yaml"
+    with open(config_out_path, "w") as f:
+        yaml.safe_dump(config, f)
+    LOGGER.info("Saved config to %s", config_out_path)
 
     trainer = Trainer(
         model=model,
@@ -173,36 +179,69 @@ def main():
         trainer.load_checkpoint(resume_path)
 
     # 7. Start the Training Loop
-    trainer.fit()
+    history = trainer.fit()
     LOGGER.info("Experiment %s finished.", experiment_name)
+
+    # Save training log to CSV
+    log_csv_path = exp_save_dir / "train_log.csv"
+    with open(log_csv_path, "w", newline="") as csvfile:
+        fieldnames = ["epoch", "train_loss", "val_loss", "val_auc", "learning_rate"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in history:
+            writer.writerow(
+                {
+                    "epoch": row.get("epoch"),
+                    "train_loss": row.get("train_loss"),
+                    "val_loss": row.get("val_loss"),
+                    "val_auc": row.get("val_auc"),
+                    "learning_rate": row.get("learning_rate"),
+                }
+            )
+    LOGGER.info("Saved train log to %s", log_csv_path)
 
     # 8. Compute and log disease-wise AUROC on test set (using best model)
     LOGGER.info("Computing disease-wise AUROC on test set...")
-    best_model_path = exp_save_dir / "best_model.pth"
+    best_model_path = exp_save_dir / "best_model.pt"
+
     if best_model_path.exists():
         checkpoint = torch.load(best_model_path, map_location=device)
         model.load_state_dict(checkpoint["model_state_dict"])
         LOGGER.info("Loaded best model for evaluation")
 
-    disease_aurocs, macro_auroc = compute_disease_auroc(
-        model, test_loader, device, disease_classes
-    )
+        disease_aurocs, macro_auroc = compute_disease_auroc(
+            model, test_loader, device, disease_classes
+        )
 
-    # Log results
-    LOGGER.info("=== Disease-wise AUROC Results ===")
-    for disease, auroc in disease_aurocs.items():
-        LOGGER.info("%-25s: %.4f", disease, auroc)
-    LOGGER.info("Macro AUROC (avg): %.4f", macro_auroc)
-
-    # Save AUROC results to file
-    results_path = exp_save_dir / "disease_aurocs.txt"
-    with open(results_path, "w") as f:
-        f.write("Disease-wise AUROC Results\n")
-        f.write("=" * 40 + "\n")
+        # Log results
+        LOGGER.info("=== Disease-wise AUROC Results ===")
         for disease, auroc in disease_aurocs.items():
-            f.write(f"{disease:25s}: {auroc:.4f}\n")
-        f.write(f"Macro AUROC (avg): {macro_auroc:.4f}\n")
-    LOGGER.info("AUROC results saved to %s", results_path)
+            LOGGER.info("%-25s: %.4f", disease, auroc)
+        LOGGER.info("Macro AUROC (avg): %.4f", macro_auroc)
+
+        # Save Final Metrics as JSON
+        mean_auc = (
+            float(np.mean(list(disease_aurocs.values()))) if disease_aurocs else 0.0
+        )
+        micro_auc = (
+            mean_auc  # Placeholder: adjust if you calculate true micro_auc separately
+        )
+
+        metrics = {
+            "mean_auc": mean_auc,
+            "macro_auc": macro_auroc,
+            "micro_auc": micro_auc,
+            "per_class_auc": disease_aurocs,
+        }
+
+        metrics_path = exp_save_dir / "metrics.json"
+        with open(metrics_path, "w") as f:
+            json.dump(metrics, f, indent=2)
+        LOGGER.info("Saved metrics to %s", metrics_path)
+    else:
+        LOGGER.warning(
+            "Best model not found at %s. Skipping metrics generation.", best_model_path
+        )
 
 
 if __name__ == "__main__":
