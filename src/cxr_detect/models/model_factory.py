@@ -1,6 +1,9 @@
 import logging
 import torch.nn as nn
+
+from cxr_detect.models.densenet import CXRDenseNet
 from cxr_detect.models.resnet import CXRResNet
+from cxr_detect.models.efficientnet import CXREfficientNet
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,12 +32,25 @@ def create_model(
             num_classes=num_classes, model_name=model_name, pretrained=pretrained
         )
 
-    # Easily extensible in the future:
-    # elif model_name.startswith("densenet"):
-    #     return CXRDenseNet(...)
+    elif model_name.startswith("densenet"):
+        LOGGER.info(
+            f"Initializing {model_name} (classes={num_classes}, pretrained={pretrained})"
+        )
+        return CXRDenseNet(
+            num_classes=num_classes, model_name=model_name, pretrained=pretrained
+        )
+
+    elif model_name.startswith("efficientnet"):
+        LOGGER.info(
+            f"Initializing {model_name} (classes={num_classes}, pretrained={pretrained})"
+        )
+        return CXREfficientNet(
+            num_classes=num_classes, model_name=model_name, pretrained=pretrained
+        )
 
     else:
         raise ValueError(
             f"Model architecture '{model_name}' is not supported. "
-            f"Available options: resnet18, resnet34, resnet50."
+            f"Available options: resnet18, resnet34, resnet50, densenet121, densenet169, densenet201, "
+            f"efficientnet_b0, efficientnet_b4, efficientnet_b7."
         )
